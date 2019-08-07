@@ -1,0 +1,499 @@
+Linear Regression Code:
+/*Demo*/
+data Demo_reg;
+set a.demo;
+keep Panelist_ID
+Panelist_Type
+Combined_Pre_Tax_Income_of_HH
+Family_Size
+HH_RACE
+Type_of_Residential_Possession
+Age_Group_Applied_to_Male_HH
+Education_Level_Reached_by_Male
+Occupation_Code_of_Male_HH
+Male_Working_Hour_Code
+Age_Group_Applied_to_Female_HH
+Education_Level_Reached_by_Femal
+Occupation_Code_of_Female_HH
+Female_Working_Hour_Code
+Number_of_Dogs
+Number_of_Cats
+Children_Group_Code
+Marital_Status
+Number_of_TVs_Used_by_HH
+Number_of_TVs_Hooked_to_Cable;
+run;
+ 
+proc sql;
+create table roll_panel as
+select panid, dollars, units, 1165 - week as diff
+from a.groc_details;
+quit;
+ 
+ 
+proc sql;
+create table roll_panel as
+select panid, sum(units) as qty, min(diff) as recency, count(panid) as frequency, sum(dollars) as sales
+from roll_panel
+group by 1;
+quit;
+ 
+proc sql;
+create table lin_reg as
+select panid, qty, recency, frequency, sales, Panelist_Type, Combined_Pre_Tax_Income_of_HH, Family_Size, HH_RACE, Type_of_Residential_Possession,
+Male_Working_Hour_Code, Female_Working_Hour_Code, Number_of_Dogs, Number_of_Cats, Children_Group_Code, Marital_Status,
+Number_of_TVs_Used_by_HH, Number_of_TVs_Hooked_to_Cable, Education_Level_Reached_by_Femal, Education_Level_Reached_by_Male,
+Age_Group_Applied_to_Male_HH, Age_Group_Applied_to_Female_HH
+from roll_panel a
+inner join Demo_reg b
+on a.panid=b.panelist_id;
+quit;
+ 
+ 
+data lin_reg1;
+set lin_reg;
+if Marital_Status = 2 then Married = 1; else Married = 0;
+if Children_Group_Code = 8 then Children_present = 0; else Children_present = 1; 
+if Number_of_Cats = 0 then Cats_present = 0; else Cats_present = 1; 
+if Number_of_Dogs = 0 then Dogs_present = 0; else Dogs_present = 1; 
+if Female_Working_Hour_Code = 2 then Partime_Females = 1; else Partime_Females = 0; 
+if Female_Working_Hour_Code = 3 then Working_Females = 1; else Working_Females = 0; 
+if Female_Working_Hour_Code = 4 then Retired_Females = 1; else Retired_Females = 0; 
+if Female_Working_Hour_Code = 5 then Homemaker_Females = 1; else Homemaker_Females = 0; 
+if Female_Working_Hour_Code = 6 then Student_Females = 1; else Student_Females = 0; 
+if Male_Working_Hour_Code = 2 then Partime_Males = 1; else Partime_Males = 0; 
+if Male_Working_Hour_Code = 3 then Working_Males = 1; else Working_Males = 0; 
+if Male_Working_Hour_Code = 4 then Retired_Males = 1; else Retired_Males = 0; 
+if Male_Working_Hour_Code = 5 then Homemaker_Males = 1; else Homemaker_Males = 0; 
+if Male_Working_Hour_Code = 6 then Student_Males = 1; else Student_Males = 0; 
+if Type_of_Residential_Possession = 2 then House_Owner = 1; else House_Owner = 0;
+if Type_of_Residential_Possession = 1 then House_Renter = 1; else House_Renter = 0;
+if HH_RACE = 3 then Hispanics = 1; else Hispanics = 0;
+if Family_Size = 2 or Family_Size = 1 then Small_Family = 1; else Small_Family = 0;
+if Combined_Pre_Tax_Income_of_HH = 12 or Combined_Pre_Tax_Income_of_HH = 7 or Combined_Pre_Tax_Income_of_HH = 8 or
+   Combined_Pre_Tax_Income_of_HH = 9 or Combined_Pre_Tax_Income_of_HH = 10 or Combined_Pre_Tax_Income_of_HH = 11 then Incometax = 1; else Incometax = 0;
+if Number_of_TVs_Used_by_HH = 1 or Number_of_TVs_Used_by_HH = 2 or Number_of_TVs_Used_by_HH = 3 or Number_of_TVs_Used_by_HH = 4 or
+   Number_of_TVs_Used_by_HH = 5 then TV_used = 1; else TV_used = 0;
+if Number_of_TVs_Hooked_to_Cable = 1 or Number_of_TVs_Hooked_to_Cable = 2 or Number_of_TVs_Hooked_to_Cable = 3 or
+   Number_of_TVs_Hooked_to_Cable = 4 or Number_of_TVs_Hooked_to_Cable = 5 thenCable_connec = 1; else Cable_connec = 0;
+if Education_Level_Reached_by_Femal = 0 or Education_Level_Reached_by_Femal = 1 or Education_Level_Reached_by_Femal = 2 or
+   Education_Level_Reached_by_Femal = 3 or Education_Level_Reached_by_Femal = 4 thenFem_Educ = 0; else Fem_Educ = 1;
+if Education_Level_Reached_by_Male = 0 or Education_Level_Reached_by_Male = 1 or Education_Level_Reached_by_Male = 2 or
+   Education_Level_Reached_by_Male = 3 or Education_Level_Reached_by_Male = 4 thenMale_Educ = 0; else Male_Educ = 1;
+if Age_Group_Applied_to_Female_HH = 0 or Age_Group_Applied_to_Female_HH = 1 or Age_Group_Applied_to_Female_HH = 2 or
+   Age_Group_Applied_to_Female_HH = 3 then Fem_Age = 0; else Fem_Age = 1;
+if Age_Group_Applied_to_Male_HH = 0 or Age_Group_Applied_to_Male_HH = 1 or Age_Group_Applied_to_Male_HH = 2 or
+   Age_Group_Applied_to_Male_HH = 3 then Male_Age = 0; else Male_Age = 1;
+if sales > 20 then High_Sales = 1; else High_Sales = 0;
+run;
+ 
+Proc reg data=lin_reg1;
+model sales = recency Married Children_present Cats_present Dogs_present Partime_Females Working_Females Retired_Females Incometax
+Cable_connec Homemaker_Females Student_Females Partime_Males Working_Males Retired_Males Homemaker_Males Student_Males House_Owner
+House_Renter Small_Family Fem_Educ Male_Educ Fem_Age Male_Age TV_used/stb;
+run;
+RFM Code:
+/*RFM Analysis*/
+
+LIBNAME Project "H:\SAS files\mustketc_new\";
+run;                                                                                                                                                                  
+
+/*IMPORTING PANEL DATA*/  
+data PROJECT.PANEL_DATA;
+infile 'H:\SAS files\mustketc_new\mustketc_PANEL_GR_1114_1165.dat' expandtabs firstobs=2;
+input PANID	WEEK	UNITS	OUTLET $	DOLLARS	IRI_KEY	COLUPC;
+run; 
+PROC IMPORT DATAFILE="H:\SAS files\mustketc_new\prod_mustketc" OUT=PROJECT.GROC dbms=xls;                                                                                                                        
+getnames=yes;                      
+run;   
+PROC IMPORT DATAFILE="H:\SAS files\ads demo.csv" OUT=PROJECT.DEMOGRAPGIC dbms=csv;                                                                                                                        
+getnames=yes;                      
+run; 
+data append_process;                           
+set PROJECT.GROC;             
+sy1=input(SY,2.);            
+ge1=input(GE,2.);                    
+vend1=input(VEND,5.);                  
+item1=input(ITEM,5.);                  
+ven=put(vend1,z5.);                     
+itm=put(item1,z5.);                     
+sys=put(sy1,2.);                     
+gen=put(ge1,2.);                     
+run; 
+proc print data=append_process (obs=6);run;
+                                   
+data concat_colupc;                           
+set append_process;                            
+if sys=0 then colupc=cats(of gen ven itm);else colupc=cats(of sys gen ven itm);
+run; 
+proc print data=concat_colupc (obs=6);run;  
+                                   
+data conv_upc;                           
+set concat_colupc;                            
+colu=input(colupc,best12.);        
+drop colupc;  
+drop sy1 ge1 vend1 item1 ven itm sys gen;  
+rename colu=colupc;                
+run; 
+                                                                                                                                                                /*MERGING PANEL AND PRODUCT DATA*/                                                                   
+PROC SORT DATA=PROJECT.PANEL_DATA; by colupc;      
+PROC SORT DATA=conv_upc; by colupc;   run;   
+DATA panel_prod_data;                          
+MERGE PROJECT.PANEL_DATA(In=aa)conv_upc; IF aa; BY colupc;
+run;                               
+                                                                                                                                                                      /*SELECTING ONLY MUSTARD CATEGORY*/                                                                   
+DATA Ketchup_data;          
+set work.panel_prod_data;                      
+if L2="KETCHUP";  
+keep PANID WEEK DOLLARS;  
+run;                               
+
+                                                                                                                                                                      /*CALCULATING R F M VALUES*/                                                                   
+PROC SQL;                          
+CREATE TABLE PROJECT.RFM AS        
+SELECT PANID, MAX(WEEK) AS PURCHASEWEEK, COUNT(PANID) AS FREQUENCY, SUM(DOLLARS) AS SALES FROM Ketchup_data GROUP BY PANID;                                                                                                                                            
+RUN; 
+
+                                                                                                                                                                    /*RANKING THE DATA*/                                                                   
+proc sort data=project.rfm out=PURCHASEWEEK; 
+by DESCENDING PURCHASEWEEK;      
+run;  
+proc print data= PURCHASEWEEK (obs=6);run; 
+                                   
+PROC RANK DATA=Project.RFM out=rfm_R ties=low groups=5;                                    
+var PURCHASEWEEK;                
+ranks RECENCY;                           
+run;  
+proc print data= rfm_R (obs=6);run;  
+                                   
+PROC RANK DATA=rfm_R out=rfm_F ties=low groups=5;                                                                            
+var frequency;                     
+ranks FREQ;                           
+run;                               
+                                   
+PROC RANK DATA=rfm_F out=rfm_M ties=low groups=5;                                                                                                                  
+var sales;                         
+ranks MONETARY;                           
+run;
+
+proc print data= rfm_M (obs=6);run; 
+
+/*CALCULATING RFM SCORE*/                                                                   
+data RFM_Score;                          
+set work.rfm_M;                     
+RECENCY+1;                               
+FREQ+1;                               
+MONETARY+1;                               
+RFMScore=cats(of RECENCY FREQ MONETARY)+0;  
+DROP FREQUENCY; 
+rename value = SALES;
+run;  
+
+proc print data=RFM_Score (obs=20);run;
+                                   
+data project.RFM REPLACE;          
+set work.RFM_Score;  
+run;  
+proc cluster data = work.RFM_Score outtree = rfm_cluster method = ward ccc pseudo;
+var RECENCY FREQ MONETARY; 
+id panid;
+run;
+ 
+PROC TREE data = rfm_cluster out = rfm_Dendrogram nclusters=5;
+ID panid;
+copy RECENCY FREQ MONETARY;  
+run; 
+/*CLUSTERING*/                                                                                   
+data Project.clusters replace;     
+set work.rfm_Dendrogram;                   
+rename PANID=Panelist_ID;          
+run;                               
+
+/*MERGING CLUSTER DATA WITH DEMOGRAPHIC DATA*/                                                                   
+PROC SORT DATA=Project.Clusters; by Panelist_ID;   run;                                                                                                                                                                                                             
+PROC SORT DATA=PROJECT.DEMOGRAPGIC; by Panelist_ID;     run;                                                                                                                                                                                                            
+DATA Clusterdemos;                 
+MERGE Project.Clusters(in=aa)PROJECT.DEMOGRAPGIC; IF aa; BY Panelist_ID;  
+run;  
+                                   
+PROC MEANS DATA=work.clusterdemos; 
+VAR RECENCY FREQ MONETARY panelist_type combined_pre_tax_income_of_hh family_size hh_race type_of_residential_possession age_group_applied_to_male_hh Education_Level_Reached_by_Male occupation_code_of_male_hh Male_working_hour_code age_group_applied_to_female_hh          
+ Education_Level_Reached_by_Femal occupation_code_of_female_hh Female_working_hour_code children_group_code marital_status;                                                                                                                                     
+CLASS CLUSTER;                     
+run; 
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+MDC Code:
+data GroceryStores;
+infile 'H:\Predictive Project\mustketc\mustketc_groc_1114_1165' expandtabs firstobs=2;
+input IRI_KEY WEEK SY GE VEND ITEM UNITS DOLLARS F $ D PR;
+run;
+PROC IMPORT OUT= WORK.Delivery DATAFILE= "H:/Predictive Project/DeliveryStores.xlsx" 
+            DBMS=xlsx REPLACE;
+      GETNAMES=YES;
+RUN;
+proc sql;
+create table GroceryDelivery as 
+(select * from Delivery inner join Grocerystores on Delivery.IRI_KEY=Grocerystores.IRI_KEY);
+quit;
+data dummyGD2;
+set GroceryDelivery;
+run;
+data ProductK5;
+set ProductK;
+run;
+data ProductK4;
+new_SY=SY*1.0;
+drop SY;
+rename new_SY=SY;
+run;
+proc sql;
+create table dummygdproduct4 as 
+(select * from dummyGD2 inner join Productket on dummyGD2.SY=Productket.SY and dummyGD2.GE=Productket.GE and dummyGD2.VEND=Productket.VEND and dummyGD2.ITEM=Productket.ITEM);
+quit;
+data dummypandem;
+set paneldemo;
+run;
+proc sql;select * from Grocerypanel3 where IRI_KEY=234140;quit;
+proc sql;
+create table paneldemostoreproduct as 
+(select * from dummygdproduct inner join paneldemo on dummygdproduct.IRI_KEY=paneldemo.IRI_KEY and dummygdproduct.WEEK=paneldemo.WEEK);
+quit;
+proc sql;select * from dummygdproduct where IRI_KEY=234140;quit;
+proc sql;select * from paneldemo where IRI_KEY=234140;quit;
+data pdemo1;
+set paneldemo;
+new_COLUPC=put(COLUPC,$14.);
+drop COLUPC;
+rename new_COLUPC=COLUPC;
+run;
+proc sql;alter table pdemo1 drop COLUPC;quit;
+data pdemo2;
+set paneldemo;
+new_COLUPC=put(COLUPC,z14.);
+format COLUPC z14.;
+run;
+proc sql;
+alter table pdemo1 add UPC_new char(14) label='newUPC';
+quit;
+proc sql;
+update pdemo1 set UPC_new=LPAD(TRIM(COLUPC),14,'0');quit;
+data dummyGD;
+set GroceryDelivery;
+length UPC $ 16;
+UPC=cat(SY,GE,VEND,ITEM);
+run;
+proc sql;
+create table final as 
+(select * from pdemo2 p inner join dummygdproduct4 d on p.IRI_KEY=d.IRI_KEY and p.WEEK=d.WEEK and p.new_COLUPC=d.UPC_1);
+quit;
+data finaldummy;
+set final;
+run;
+proc sql;
+alter table finaldummy add Brand char label='Brand';
+quit;
+proc sql;
+alter table finaldummy drop Brand;quit;
+proc sql;
+Update finaldummy set Brand='Heinz' where Upper(finaldummy.L5) like '%HEIN%';
+run; 
+proc sql;
+Update finaldummy set Brand='Hunts' where Upper(finaldummy.L5) like '%HUNT%';
+run; 
+proc sql;
+Update finaldummy set Brand='DelMonte' where Upper(finaldummy.L5) like '%DEL MONTE%';
+run; 
+proc sql;
+Update finaldummy set Brand='Others' where Upper(finaldummy.L5) not like '%DEL MONTE%' AND Upper(finaldummy.L5) not like '%HEIN%' AND Upper(finaldummy.L5) not like '%HUNT%' ;
+run;
+
+data dummyGD1;
+set dummyGD;
+new_UPC=UPC*1.0;
+DROP UPC;
+RENAME new_UPC=UPC;
+run;
+data ProductK1;
+set ProductK;
+new_UPC=UPCCode*1.0;
+DROP UPCCode;
+RENAME new_UPC=UPCCode;
+run;
+PROC IMPORT OUT= WORK.ProductKet DATAFILE= "H:/Predictive Project/ProductKetchup.xlsx" 
+            DBMS=xlsx REPLACE;
+      GETNAMES=YES;
+RUN;
+proc sql;
+create table GroDelPro as 
+(select * from Dummygd1 inner join ProductK1 on dummygd1.UPC=ProductK1.UPCCode);
+quit;
+proc sql;
+create table PanelStore as 
+(select * from Paneldemo inner join GroDelPro on Paneldemo.COLUPC=GroDelPro.UPCCode and Paneldemo.IRI_KEY=GroDelPro.IRI_KEY and paneldemo.WEEK=GroDelPro.WEEK);
+quit;
+proc sql;
+alter table PanelStore add Brand char label='BrandName';
+quit;
+proc sql;
+Update PanelStore set Brand='Heinz' where Upper(PanelStore.L5) like '%HEIN%';
+run; 
+proc sql;
+Update PanelStore set Brand='Hunts' where Upper(PanelStore.L5) like '%HUNT%';
+run; 
+proc sql;
+Update PanelStore set Brand='DelMonte' where Upper(PanelStore.L5) like '%DEL MONTE%';
+run; 
+proc sql;
+Update PanelStore set Brand='Others' where Upper(PanelStore.L5) not like '%DEL%' AND Upper(PanelStore.L5) not like '%HEIN%' AND Upper(PanelStore.L5) not like '%HUNT%' ;
+run;
+proc sql;
+select * from GroceryPanel3 where COLUPC=022400001340;
+quit;
+proc sql;
+create table PanelStore1 as 
+(select * from Paneldemo inner join GroDelPro on Paneldemo.IRI_KEY=GroDelPro.IRI_KEY and paneldemo.WEEK=GroDelPro.WEEK);
+quit;
+PROC IMPORT OUT= WORK.FinalData DATAFILE= "H:/Predictive Project/FilteredData.xls" 
+            DBMS=xls REPLACE; 
+     GETNAMES=YES;
+RUN;
+data dummyfinal;
+set finaldata;
+run;
+proc tabulate data=dummyfinal;
+class Brand WEEK;
+var PricePerOz_;
+table Brand,WEEK*PricePerOz_*mean;
+run;
+proc tabulate data=dummyfinal;
+class Brand WEEK;
+var PR;
+table Brand, WEEK*PR*mean;
+run;
+proc sql;
+alter table dummyfinal add Feature num label='Feature';
+quit;
+proc sql;
+Update dummyfinal set Feature=0 where Upper(dummyfinal.F) like '%NONE%';
+quit; 
+proc sql;
+Update dummyfinal set Feature=1 where Upper(dummyfinal.F) not like '%NONE%';
+quit; 
+proc tabulate data=dummyfinal;
+class Brand WEEK;
+var Feature;
+table Brand, WEEK*Feature*mean;
+run;
+proc sql;
+alter table dummyfinal add Display num label='Display';
+quit;
+proc sql;
+Update dummyfinal set Display=0 where dummyfinal.D=0;
+quit; 
+proc sql;
+Update dummyfinal set Display=1 where dummyfinal.D=1 or dummyfinal.D=2;
+quit;
+proc tabulate data=dummyfinal;
+class Brand WEEK;
+var Display;
+table Brand, WEEK*Display*mean;
+run; 
+proc sql;
+alter table dummyfinal drop BrandValue;
+run;
+
+proc sql;
+alter table dummyfinal add BrandValue num label='BrandValue';
+run;
+proc sql;
+Update dummyfinal set BrandValue=1 where dummyfinal.Brand='Heinz';
+quit;
+proc sql;
+Update dummyfinal set BrandValue=2 where dummyfinal.Brand='Hunts';
+quit;
+proc sql;
+Update dummyfinal set BrandValue=3 where dummyfinal.Brand='DelMonte';
+quit;
+proc sql;
+Update dummyfinal set BrandValue=4 where dummyfinal.Brand='Others';
+quit;
+PROC IMPORT OUT= WORK.MDC DATAFILE= "H:/Predictive Project/DummyAccess.xls" 
+            DBMS=xls REPLACE; 
+     GETNAMES=YES;
+RUN;
+data newdummdc3 (keep=panid tid decision mode Price display feature PriceReduction Combined_Pre_Tax_Income_of_HH Family_Size Children_Group_Code);
+set mdc;
+array pvec{4} p1 - p4;
+array dvec{4} d1 - d4;
+array fvec{4} f1 - f4;
+array prvec{4} PR1- PR4;
+retain tid 0;
+tid+1;
+do i = 1 to 4;
+	mode=i;
+	Price=pvec{i};
+	display=dvec{i};
+	feature=fvec{i};
+	PriceReduction=prvec{i};
+	decision=(BrandValue=i);
+	output;
+end;
+run;
+ods html;
+data newmdc1;
+set newdummdc3;
+BrandValue2=0;
+BrandValue3=0;
+BrandValue4=0;
+if mode = 2 then BrandValue2 = 1;
+if mode = 3 then BrandValue3 = 1;
+if mode = 4 then BrandValue4 = 1;
+inc2=Combined_Pre_Tax_Income_of_HH*BrandValue2;
+inc3=Combined_Pre_Tax_Income_of_HH*BrandValue3;
+inc4=Combined_Pre_Tax_Income_of_HH*BrandValue4;
+kid2=Children_Group_Code*BrandValue2;
+kid3=Children_Group_Code*BrandValue3;
+kid4=Children_Group_Code*BrandValue4;
+nmemb2=Family_Size*BrandValue2;
+nmemb3=Family_Size*BrandValue3;
+nmemb4=Family_Size*BrandValue4;
+run;
+data modifiedmdc6;
+set newmdc1;run;
+data b;
+set modifiedmdc6;
+new_Price=Price*1.0;
+drop Price;
+rename new_Price=Price;run;
+data c;
+set b;
+new_PriceReduction=PriceReduction*1.0;
+drop PriceReduction;
+rename new_PriceReduction=PriceReduction;run;
+
+proc means data=modifiedmdc6; run;
+proc mdc data=c;
+model decision = BrandValue2 BrandValue3 BrandValue4 Price PriceReduction display feature inc2-inc4 nmemb2-nmemb4 kid2-kid4/ type=clogit 
+	nchoice=4;
+	id tid;
+	output out=Probketchup1 pred=p;
+run;
+
+
+
+
+
