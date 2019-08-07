@@ -1,0 +1,79 @@
+data bank4;
+infile 'H:\Assignment4\bank.csv' firstobs=2 delimiter=';' dsd;
+input age job $ marital $ education $ default $ balance housing $ loan $ contact $ day month $ duration
+campaign Pdays Previous Poutcome $ y $;
+/**if Pdays=-1 then Pdays=.;**/
+run;
+
+proc logistic data=bank4 outmodel=Regout descending;
+class job marital education default housing loan contact month poutcome /param=ref;
+model y=age job marital education default balance housing loan contact day month duration campaign Pdays Previous Poutcome/firth;
+run;
+
+data bankfull1;
+infile 'H:\Assignment4\bank-full.csv' firstobs=2 delimiter=';' dsd;
+input age job $ marital $ education $ default $ balance housing $ loan $ contact $ day month $ duration
+campaign Pdays Previous Poutcome $ y $;
+/**if Pdays=-1 then Pdays=.;**/
+run;
+
+proc logistic inmodel=Regout;
+score data=bankfull1;
+run;
+
+proc freq;table y;run;
+
+data PDA ;
+INFILE "H:\Assignment4\pda_2001.csv " DLM = ',' FIRSTOBS = 2 ; 
+INPUT ID Innovator message cell pim passive active remote share monitor email web media ergonomic monthly price ; 
+run;
+
+proc print data = PDA (obs = 20 ) ; 
+run ; 
+
+PROC cluster data = PDA outtree=tree standard method = average pseudo rmsstd ccc ; 
+  id ID ; 
+run ;
+
+proc tree data=tree out=cluster11 ncl=4;
+id ID;
+run;
+
+proc sort data=PDA; by ID;run;
+proc sort data=cluster11; by ID; run;
+data PDAdemo;
+INFILE "H:\Assignment4\pda_disc2001.csv " DLM = ',' FIRSTOBS = 2 ; 
+INPUT ID Age Education Income Construction Emer Sales Service Professional Compu PDA Cell PC Away Bus PC Field Gourm ; 
+run;
+proc print data = PDAdemo(obs=20);run;
+proc sort data=PDAdemo; by ID; run;
+PROC cluster data = PDAdemo outtree=tree standard method = average pseudo rmsstd ccc ; 
+  id ID ; 
+run ;
+DATA combinePDA;
+MERGE PDA PDAdemo cluster11; BY ID;
+RUN;
+PROC MEANS data=combinePDA;
+class cluster;
+RUN;
+
+proc standard data=PDA mean=0 std=1 out = PDA_std;
+VAR Innovator -- price;
+run;
+proc fastclus data = PDA_std maxclusters=4 out=K_clus;
+run;
+
+data clus_meansdata;
+set K_clus;
+keep id cluster;
+run;
+
+data pda_clus;
+merge clus_meansdata PDA PDAdemo;
+by id;
+run;
+
+
+proc means data=pda_clus;
+class cluster;
+run;
